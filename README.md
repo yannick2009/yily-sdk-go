@@ -22,15 +22,16 @@ import (
 	"context"
 	"log"
 	"os"
+	"time"
 
 	"github.com/yannick2009/yily-sdk-go"
 )
 
 type AppConfig struct {
-	DBHost  string  `yily:"DB_HOST"`
-	DBPort  int     `yily:"DB_PORT"`
-	Debug   bool    `yily:"DEBUG"`
-	Timeout float64 `yily:"TIMEOUT"`
+	DBHost  string        `yily:"DB_HOST"`
+	DBPort  int           `yily:"DB_PORT"`
+	Debug   bool          `yily:"DEBUG"`
+	Timeout time.Duration `yily:"TIMEOUT"`
 }
 
 func main() {
@@ -53,7 +54,14 @@ func main() {
 
 	log.Println("Yily configuration loaded")
 
-	// 2. Retrieve an individual variable by name
+	// 2. Retrieve all active variables as a map without knowing names in advance
+	allVars, err := client.GetAll(ctx)
+	if err != nil {
+		log.Fatalf("failed to get all variables: %v", err)
+	}
+	_ = allVars // map[string]string
+
+	// 3. Retrieve an individual variable by name
 	apiKey, err := client.Get(ctx, "API_KEY")
 	if err != nil {
 		log.Fatalf("failed to get API_KEY: %v", err)
@@ -62,7 +70,7 @@ func main() {
 		log.Fatal("API_KEY is empty")
 	}
 
-	// 3. Retrieve a specific version of a variable
+	// 4. Retrieve a specific version of a variable
 	legacyKey, err := client.Get(ctx, "API_KEY", yily.Version(1))
 	if err != nil {
 		log.Fatalf("failed to get legacy key: %v", err)
@@ -71,7 +79,7 @@ func main() {
 }
 ```
 
-Use a read-scoped PAT for applications that only need to load configuration. PATs are created and managed through Yily's web interface. `Load` makes one request for active values; if fields request historical versions, it makes one request for each distinct version number. A single `version=N` request applies that version to all names in that request.
+Use a read-scoped PAT for applications that only need to load configuration. PATs are created and managed through Yily's web interface. `Load` makes one request for active values; if fields request historical versions, it makes one request for each distinct version number. `GetAll` makes one request to list the environment's variables and a second batch request to fetch their active values.
 
 Use HTTPS for deployed applications. The HTTP URL in the example is intended for local development only.
 
@@ -81,10 +89,20 @@ The loader automatically converts Yily variables into the following Go types:
 - `string`
 - `int`
 - `int64`
+- `time.Duration` (parsed via `time.ParseDuration`, e.g., `"5s"`, `"250ms"`, `"1h30m"`)
 - `float64`
 - `bool`
 
 Fields tagged with `yily:"-"` or without any `yily` tag are ignored.
+
+## Secret Refreshing
+
+Applications can refresh secrets during runtime by recalling `Load` or `GetAll`:
+
+- **Updating a struct**: Call `client.Load(ctx, &cfg)` again to retrieve the latest values. If retrieval or conversion fails for any field, the struct remains completely unchanged.
+- **Fetching all variables**: Call `client.GetAll(ctx)` to obtain a fresh `map[string]string` containing all active environment variables. Note that because `GetAll` issues two sequential requests (listing variables, then reading their values), it is not an atomic snapshot if variables are modified or removed concurrently.
+
+> **Note on `Watch`**: A real-time secret observation mechanism (`Watch`) for push updates or automated rotation without polling is being evaluated for future releases once the operational requirement is confirmed.
 
 ## Error Handling
 

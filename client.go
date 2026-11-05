@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -173,24 +172,40 @@ func (c *Client) Get(ctx context.Context, name string, opts ...GetOption) (strin
 		return "", ErrInvalidVersion
 	}
 
-	query := url.Values{}
-	query.Set("name", name)
-
-	if options.version > 0 {
-		query.Set("version", strconv.Itoa(options.version))
-	}
-
-	path := fmt.Sprintf("/environments/%s/variables/values", url.PathEscape(c.environmentID))
-
-	var resp apiResponse[map[string]string]
-	if err := c.do(ctx, http.MethodGet, path, query, nil, &resp); err != nil {
+	values, err := c.fetchBatchValues(ctx, []string{name}, options.version)
+	if err != nil {
 		return "", err
 	}
 
-	value, ok := resp.Data[name]
+	value, ok := values[name]
 	if !ok {
 		return "", ErrVariableNotFound
 	}
 
 	return value, nil
+}
+
+// GetAll returns a map of variable names to their active values for the client's
+// environment. It first lists the variables, then fetches their values in one batch
+// request; changes made between these requests may affect the result.
+func (c *Client) GetAll(ctx context.Context) (map[string]string, error) {
+	path := fmt.Sprintf("/environments/%s/variables", url.PathEscape(c.environmentID))
+
+	var resp apiResponse[[]struct {
+		Name string `json:"name"`
+	}]
+	if err := c.do(ctx, http.MethodGet, path, nil, nil, &resp); err != nil {
+		return nil, err
+	}
+
+	if len(resp.Data) == 0 {
+		return make(map[string]string), nil
+	}
+
+	names := make([]string, 0, len(resp.Data))
+	for _, item := range resp.Data {
+		names = append(names, item.Name)
+	}
+
+	return c.fetchBatchValues(ctx, names, 0)
 }
