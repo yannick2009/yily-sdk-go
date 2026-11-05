@@ -96,6 +96,49 @@ func inspectStruct(target any) ([]fieldInfo, error) {
 	return fields, nil
 }
 
+// fetchBatchValues retrieves variable values from the Yily API for the given names and version.
+// If version is 0, active versions are retrieved.
+func (c *Client) fetchBatchValues(ctx context.Context, names []string, version int) (map[string]string, error) {
+	if len(names) == 0 {
+		return make(map[string]string), nil
+	}
+
+	query := url.Values{}
+	requested := make(map[string]struct{}, len(names))
+	for _, name := range names {
+		name = normalizeVariableName(name)
+		if name == "" {
+			continue
+		}
+		if _, exists := requested[name]; exists {
+			continue
+		}
+		requested[name] = struct{}{}
+		query.Add("name", name)
+	}
+
+	if len(requested) == 0 {
+		return make(map[string]string), nil
+	}
+
+	if version > 0 {
+		query.Set("version", strconv.Itoa(version))
+	}
+
+	path := fmt.Sprintf("/environments/%s/variables/values", url.PathEscape(c.environmentID))
+
+	var resp apiResponse[map[string]string]
+	if err := c.do(ctx, http.MethodGet, path, query, nil, &resp); err != nil {
+		return nil, err
+	}
+
+	if resp.Data == nil {
+		return make(map[string]string), nil
+	}
+
+	return resp.Data, nil
+}
+
 // fetchValues retrieves variable values from the Yily API in a batch request.
 func (c *Client) fetchValues(ctx context.Context, fields []fieldInfo) (map[string]string, error) {
 	if len(fields) == 0 {
@@ -112,27 +155,18 @@ func (c *Client) fetchValues(ctx context.Context, fields []fieldInfo) (map[strin
 	}
 	sort.Ints(versions)
 
-	path := fmt.Sprintf("/environments/%s/variables/values", url.PathEscape(c.environmentID))
 	values := make(map[string]string, len(fields))
 	for _, version := range versions {
-		query := url.Values{}
-		requested := make(map[string]struct{}, len(groups[version]))
+		names := make([]string, 0, len(groups[version]))
 		for _, field := range groups[version] {
-			if _, exists := requested[field.varName]; exists {
-				continue
-			}
-			requested[field.varName] = struct{}{}
-			query.Add("name", field.varName)
-		}
-		if version > 0 {
-			query.Set("version", strconv.Itoa(version))
+			names = append(names, field.varName)
 		}
 
-		var resp apiResponse[map[string]string]
-		if err := c.do(ctx, http.MethodGet, path, query, nil, &resp); err != nil {
+		batch, err := c.fetchBatchValues(ctx, names, version)
+		if err != nil {
 			return nil, err
 		}
-		for name, value := range resp.Data {
+		for name, value := range batch {
 			values[name] = value
 		}
 	}
