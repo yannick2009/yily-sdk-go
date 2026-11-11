@@ -4,15 +4,17 @@ import (
 	"context"
 	"log"
 	"os"
+	"time"
 
 	yily "github.com/yannick2009/yily-sdk-go"
 )
 
 type Config struct {
-	Host     string `yily:"DB_HOST"`
-	Port     int    `yily:"DB_PORT"`
-	Debug    bool   `yily:"DEBUG"`
-	APIToken string `yily:"API_TOKEN,version=2"`
+	Host     string        `yily:"DB_HOST"`
+	Port     int           `yily:"DB_PORT"`
+	Debug    bool          `yily:"DEBUG"`
+	Timeout  time.Duration `yily:"TIMEOUT"`
+	APIToken string        `yily:"API_TOKEN,version=2"`
 }
 
 func main() {
@@ -33,4 +35,10 @@ func main() {
 	}
 
 	log.Println("configuration loaded")
+
+	all, err := client.GetAll(ctx)
+	if err != nil {
+		log.Fatalf("getAll error: %v", err)
+	}
+	log.Printf("retrieved %d variables\n", len(all))
 }

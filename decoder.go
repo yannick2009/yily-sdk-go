@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"time"
 )
+
+var durationType = reflect.TypeOf(time.Duration(0))
 
 // decodeFields validates that all required variables are present, converts
 // their string values to the appropriate field types, and assigns them
@@ -23,7 +26,7 @@ func decodeFields(fields []fieldInfo, values map[string]string) error {
 			return fmt.Errorf("%w: %s", ErrVariableNotFound, f.varName)
 		}
 
-		converted, err := convertValue(raw, f.fieldVal.Kind(), f.varName)
+		converted, err := convertValue(raw, f.fieldVal.Type(), f.varName)
 		if err != nil {
 			return err
 		}
@@ -43,6 +46,8 @@ func decodeFields(fields []fieldInfo, values map[string]string) error {
 			a.fieldVal.SetInt(int64(v))
 		case int64:
 			a.fieldVal.SetInt(v)
+		case time.Duration:
+			a.fieldVal.SetInt(int64(v))
 		case float64:
 			a.fieldVal.SetFloat(v)
 		case bool:
@@ -53,9 +58,17 @@ func decodeFields(fields []fieldInfo, values map[string]string) error {
 	return nil
 }
 
-// convertValue converts a raw string into the target reflect.Kind.
-func convertValue(raw string, kind reflect.Kind, varName string) (any, error) {
-	switch kind {
+// convertValue converts a raw string into the target reflect.Type.
+func convertValue(raw string, targetType reflect.Type, varName string) (any, error) {
+	if targetType == durationType {
+		val, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("%w: variable %q is not a valid time.Duration", ErrInvalidValue, varName)
+		}
+		return val, nil
+	}
+
+	switch targetType.Kind() {
 	case reflect.String:
 		return raw, nil
 	case reflect.Int:
@@ -83,6 +96,6 @@ func convertValue(raw string, kind reflect.Kind, varName string) (any, error) {
 		}
 		return val, nil
 	default:
-		return nil, fmt.Errorf("%w: kind %s for variable %q", ErrUnsupportedType, kind, varName)
+		return nil, fmt.Errorf("%w: kind %s for variable %q", ErrUnsupportedType, targetType.Kind(), varName)
 	}
 }
