@@ -63,14 +63,13 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 		reqURL += "?" + query.Encode()
 	}
 
-	reqCtx := ctx
 	if c.timeout > 0 {
 		var cancel context.CancelFunc
-		reqCtx, cancel = context.WithTimeout(ctx, c.timeout)
+		ctx, cancel = context.WithTimeout(ctx, c.timeout)
 		defer cancel()
 	}
 
-	req, err := http.NewRequestWithContext(reqCtx, method, reqURL, body)
+	req, err := http.NewRequestWithContext(ctx, method, reqURL, body)
 
 	if err != nil {
 		return fmt.Errorf("yily: failed to create request: %w", err)
@@ -140,9 +139,10 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 // GetOption configures an individual variable retrieval.
 type GetOption func(*getOptions)
 
+// getOptions holds optional parameters for retrieving a variable.
 type getOptions struct {
-	version    int
-	versionSet bool
+	version    int  // version specifies a specific variable version number to retrieve.
+	versionSet bool // versionSet indicates whether a specific version was requested.
 }
 
 // Version specifies a specific variable version number to retrieve.
@@ -208,4 +208,16 @@ func (c *Client) GetAll(ctx context.Context) (map[string]string, error) {
 	}
 
 	return c.fetchBatchValues(ctx, names, 0)
+}
+
+// normalizeBaseURL ensures the base URL is trimmed and properly formatted with the /api/v1 prefix.
+func normalizeBaseURL(raw string) string {
+	raw = strings.TrimRight(strings.TrimSpace(raw), "/")
+	raw = strings.TrimSuffix(raw, defaultAPIPrefix)
+	return raw + defaultAPIPrefix
+}
+
+// normalizeVariableName matches the server's variable naming convention.
+func normalizeVariableName(name string) string {
+	return strings.Join(strings.Fields(strings.ToUpper(name)), "_")
 }

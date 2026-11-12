@@ -51,15 +51,3 @@ func (c *Config) validate() error {
 
 	return nil
 }
-
-// normalizeBaseURL ensures the base URL is trimmed and properly formatted with the /api/v1 prefix.
-func normalizeBaseURL(raw string) string {
-	raw = strings.TrimRight(strings.TrimSpace(raw), "/")
-	raw = strings.TrimSuffix(raw, defaultAPIPrefix)
-	return raw + defaultAPIPrefix
-}
-
-// normalizeVariableName matches the server's variable naming convention.
-func normalizeVariableName(name string) string {
-	return strings.Join(strings.Fields(strings.ToUpper(name)), "_")
-}
