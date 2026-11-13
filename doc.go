@@ -10,6 +10,9 @@
 //
 // A tag may select a specific variable version with `version=N`, for example
 // `yily:"API_KEY,version=2"`. An omitted version loads the active version.
+// GetVersion accepts the same selection for a single read:
+//
+//	legacy, err := client.GetVersion(ctx, "API_KEY", 2)
 //
 // Example:
 //

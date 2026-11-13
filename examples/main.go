@@ -31,8 +31,8 @@ func main() {
 		log.Fatalf("client error: %v", err)
 	}
 
-	// The three calls below are independent examples. In a real application,
-	// use the one that fits your need; they do not depend on each other.
+	// The examples below are independent. In a real application, use the one
+	// that fits your need; they do not depend on each other.
 
 	// Load: fill a typed struct from the fields tagged with `yily`.
 	var cfg Config
@@ -49,6 +49,13 @@ func main() {
 		log.Fatalf("get error: %v", err)
 	}
 	log.Printf("API_TOKEN retrieved (%d characters)", len(apiToken))
+
+	// GetVersion: read a specific version of a single variable.
+	legacyToken, err := client.GetVersion(ctx, "API_TOKEN", 1)
+	if err != nil {
+		log.Fatalf("get versioned error: %v", err)
+	}
+	log.Printf("API_TOKEN version 1 retrieved (%d characters)", len(legacyToken))
 
 	// GetAll: retrieve every variable of the environment as a map, when the
 	// variable names are not known in advance.

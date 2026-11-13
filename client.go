@@ -94,18 +94,37 @@ func (c *Client) Load(ctx context.Context, target any) error {
 	return decodeFields(fields, values)
 }
 
-// Get returns the value of a single configuration variable.
+// Get returns the active value of a single configuration variable.
 //
 // The name is normalized to Yily's convention (upper case, whitespace replaced
 // by underscores). Get returns ErrInvalidVariableName when the normalized name
 // is empty and ErrVariableNotFound when the variable does not exist.
 func (c *Client) Get(ctx context.Context, name string) (string, error) {
+	return c.getValue(ctx, name, 0)
+}
+
+// GetVersion returns the value of a single configuration variable at a specific
+// version. It returns ErrInvalidVersion when version is not positive.
+func (c *Client) GetVersion(ctx context.Context, name string, version int) (string, error) {
+	if version <= 0 {
+		return "", ErrInvalidVersion
+	}
+
+	return c.getValue(ctx, name, version)
+}
+
+// getValue retrieves one variable at the requested version; 0 selects the
+// active version.
+func (c *Client) getValue(ctx context.Context, name string, version int) (string, error) {
 	name = normalizeVariableName(name)
 	if name == "" {
 		return "", ErrInvalidVariableName
 	}
 
-	values, err := c.fetchBatchValues(ctx, []batchVariable{{Name: name}})
+	values, err := c.fetchBatchValues(ctx, []batchVariable{{
+		Name:    name,
+		Version: version,
+	}})
 	if err != nil {
 		return "", err
 	}

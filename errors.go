@@ -11,6 +11,7 @@ var (
 	ErrInvalidToken               = errors.New("yily: token must be a Yily PAT")                               // ErrInvalidToken is returned when the token is not a valid Yily PAT
 	ErrInvalidValue               = errors.New("yily: variable value has an invalid format")                   // ErrInvalidValue is returned when a variable value cannot be processed
 	ErrInvalidVariableName        = errors.New("yily: variable name cannot be empty")                          // ErrInvalidVariableName is returned when the variable name is empty
+	ErrInvalidVersion             = errors.New("yily: variable version must be a positive integer")            // ErrInvalidVersion is returned when a requested version is zero or negative
 	ErrInvalidTag                 = errors.New("yily: invalid yily struct tag")                                // ErrInvalidTag is returned when a yily struct tag is malformed
 	ErrConflictingVariableVersion = errors.New("yily: a variable cannot use different versions in one struct") // ErrConflictingVariableVersion is returned when fields request different versions of the same variable
 	ErrMissingBaseURL             = errors.New("yily: base URL is required")                                   // ErrMissingBaseURL is returned when the base URL is missing

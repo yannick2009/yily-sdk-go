@@ -15,6 +15,8 @@ go get github.com/yannick2009/yily-sdk-go
 
 ## Quickstart
 
+The three retrieval methods shown below are independent: in a real application you normally use the one that fits your need, not all three.
+
 ```go
 package main
 
@@ -73,7 +75,7 @@ func main() {
 }
 ```
 
-Use a read-scoped PAT for applications that only need to load configuration. PATs are created and managed through Yily's web interface. `Load` makes one batch request for active values. `GetAll` makes one request to list the environment's variables and a second batch request to fetch their active values.
+Use a read-scoped PAT for applications that only need to load configuration. PATs are created and managed through Yily's web interface. `Load` makes one batch request for the requested values (active by default, or the versions selected in tags). `GetAll` makes one request to list the environment's variables and a second batch request to fetch their active values.
 
 Use HTTPS for deployed applications. The HTTP URL in the example is intended for local development only.
 
@@ -102,11 +104,17 @@ type AppConfig struct {
 
 Without `version`, `Load` retrieves the active version. `version` must be a positive integer; unknown or repeated options return `yily.ErrInvalidTag`. A variable cannot be tagged with different versions in the same struct (`yily.ErrConflictingVariableVersion`); active and versioned fields can otherwise be mixed freely.
 
+For a single read, use `GetVersion` instead of a tag:
+
+```go
+legacyKey, err := client.GetVersion(ctx, "API_KEY", 1)
+```
+
 ## Secret Refreshing
 
 Applications can refresh secrets during runtime by recalling `Load` or `GetAll`:
 
-- **Updating a struct**: Call `client.Load(ctx, &cfg)` again to retrieve the latest values. If retrieval or conversion fails for any field, the struct remains completely unchanged.
+- **Updating a struct**: Call `client.Load(ctx, &cfg)` again to retrieve the values again. If retrieval or conversion fails for any field, the struct remains completely unchanged.
 - **Fetching all variables**: Call `client.GetAll(ctx)` to obtain a fresh `map[string]string` containing all active environment variables. Note that because `GetAll` issues two sequential requests (listing variables, then reading their values), it is not an atomic snapshot if variables are modified or removed concurrently.
 
 > **Note on `Watch`**: A real-time secret observation mechanism (`Watch`) for push updates or automated rotation without polling is being evaluated for future releases once the operational requirement is confirmed.
@@ -115,7 +123,10 @@ Applications can refresh secrets during runtime by recalling `Load` or `GetAll`:
 
 The SDK exposes sentinel errors that can be inspected with standard `errors.Is`:
 - `yily.ErrInvalidBaseURL`: the instance URL is malformed or uses a scheme other than HTTP or HTTPS.
+- `yily.ErrMissingBaseURL`: no base URL was configured.
 - `yily.ErrInvalidToken`: the configured token does not have the Yily PAT prefix.
+- `yily.ErrMissingToken`: no token was configured.
+- `yily.ErrMissingEnvironmentID`: no environment ID was configured.
 - `yily.ErrVariableNotFound`: a requested variable does not exist.
 - `yily.ErrUnauthorized`: invalid or expired token (HTTP 401).
 - `yily.ErrNotFound`: environment or resource not found (HTTP 404).
@@ -123,6 +134,7 @@ The SDK exposes sentinel errors that can be inspected with standard `errors.Is`:
 - `yily.ErrInvalidTarget`: `Load` was called with an invalid target (must be a non-nil pointer to a struct).
 - `yily.ErrInvalidValue`: a value could not be converted to the requested Go type. The error does not include the value.
 - `yily.ErrInvalidVariableName`: `Get` was called with an empty variable name after normalization.
+- `yily.ErrInvalidVersion`: `GetVersion` was called with a zero or negative version.
 - `yily.ErrInvalidTag`: a struct tag is malformed or contains an unsupported option.
 - `yily.ErrConflictingVariableVersion`: the same variable is tagged with different versions in one struct.
 
