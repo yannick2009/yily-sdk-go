@@ -5,7 +5,7 @@ Official lightweight Go SDK for retrieving configuration variables from [Yily](h
 ## Requirements
 
 - **Go**: 1.25 or later.
-- **Yily Server**: Requires a Yily instance that supports the batch variable values endpoint (`POST /api/v1/environments/:environmentID/variables/values`).
+- **Yily Server**: Requires a Yily instance that supports the batch variable values endpoint (`POST /api/v1/environments/:environmentID/variables/values`), including the optional per-variable `version` field.
 
 ## Installation
 
@@ -15,7 +15,7 @@ go get github.com/yannick2009/yily-sdk-go
 
 ## Quickstart
 
-The three retrieval methods shown below are independent: in a real application you normally use the one that fits your need, not all three.
+The examples below are independent: in a real application you normally use the one that fits your need, not all of them.
 
 ```go
 package main
@@ -72,10 +72,17 @@ func main() {
 		log.Fatal("API_KEY is empty")
 	}
 	_ = apiKey // Use the value in the application; do not log secrets.
+
+	// 4. Retrieve a specific version of an individual variable
+	legacyKey, err := client.GetVersion(ctx, "API_KEY", 1)
+	if err != nil {
+		log.Fatalf("failed to get API_KEY version 1: %v", err)
+	}
+	_ = legacyKey // Use the value in the application; do not log secrets.
 }
 ```
 
-Use a read-scoped PAT for applications that only need to load configuration. PATs are created and managed through Yily's web interface. `Load` makes one batch request for the requested values (active by default, or the versions selected in tags). `GetAll` makes one request to list the environment's variables and a second batch request to fetch their active values.
+Use a read-scoped PAT for applications that only need to load configuration. PATs are created and managed through Yily's web interface. `Load` makes one batch request for the requested values (active by default, or the versions selected in tags). `Get` and `GetVersion` make one batch request with a single variable. `GetAll` makes one request to list the environment's variables and a second batch request to fetch their active values.
 
 Use HTTPS for deployed applications. The HTTP URL in the example is intended for local development only.
 
