@@ -28,6 +28,6 @@ Applications can call `Load` or `GetAll` again to retrieve the latest active val
 
 - `client.go`: added `GetAll` and reused the batch retrieval helper in `Get`.
 - `loader.go`: added `fetchBatchValues` for shared batch retrieval.
-- `decoder.go`: added `time.Duration` conversion.
+- `loader.go`: added `time.Duration` conversion.
 - `README.md`: documented `GetAll`, duration parsing, and runtime refresh.
 - `examples/main.go`: added examples of `GetAll` and `time.Duration`.

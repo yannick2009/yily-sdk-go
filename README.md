@@ -5,7 +5,7 @@ Official lightweight Go SDK for retrieving configuration variables from [Yily](h
 ## Requirements
 
 - **Go**: 1.25 or later.
-- **Yily Server**: Requires a Yily instance that supports the batch variable values endpoint (`GET /api/v1/environments/:environmentID/variables/values`).
+- **Yily Server**: Requires a Yily instance that supports the batch variable values endpoint (`POST /api/v1/environments/:environmentID/variables/values`).
 
 ## Installation
 
@@ -69,17 +69,11 @@ func main() {
 	if apiKey == "" {
 		log.Fatal("API_KEY is empty")
 	}
-
-	// 4. Retrieve a specific version of a variable
-	legacyKey, err := client.Get(ctx, "API_KEY", yily.Version(1))
-	if err != nil {
-		log.Fatalf("failed to get legacy key: %v", err)
-	}
-	_ = legacyKey // Use the value in the application; do not log secrets.
+	_ = apiKey // Use the value in the application; do not log secrets.
 }
 ```
 
-Use a read-scoped PAT for applications that only need to load configuration. PATs are created and managed through Yily's web interface. `Load` makes one request for active values; if fields request historical versions, it makes one request for each distinct version number. `GetAll` makes one request to list the environment's variables and a second batch request to fetch their active values.
+Use a read-scoped PAT for applications that only need to load configuration. PATs are created and managed through Yily's web interface. `Load` makes one batch request for active values. `GetAll` makes one request to list the environment's variables and a second batch request to fetch their active values.
 
 Use HTTPS for deployed applications. The HTTP URL in the example is intended for local development only.
 
@@ -116,9 +110,7 @@ The SDK exposes sentinel errors that can be inspected with standard `errors.Is`:
 - `yily.ErrInvalidTarget`: `Load` was called with an invalid target (must be a non-nil pointer to a struct).
 - `yily.ErrInvalidValue`: a value could not be converted to the requested Go type. The error does not include the value.
 - `yily.ErrInvalidVariableName`: `Get` was called with an empty variable name after normalization.
-- `yily.ErrInvalidVersion`: a requested version is not a positive integer.
 - `yily.ErrInvalidTag`: a struct tag is malformed or contains an unsupported option.
-- `yily.ErrDuplicateVariable`: one struct requests different versions of the same Yily variable.
 
 ## License
 

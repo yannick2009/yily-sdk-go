@@ -7,21 +7,23 @@ import (
 	"time"
 )
 
+// Defaults applied by NewClient and normalizeBaseURL.
 const (
-	defaultTimeout   = 5 * time.Second // defaultTimeout is the default duration for HTTP requests if not specified.
-	defaultAPIPrefix = "/api/v1"       // defaultAPIPrefix is the base path for API version 1.
+	defaultTimeout   = 5 * time.Second // Default per-request timeout.
+	defaultAPIPrefix = "/api/v1"       // Base path of the Yily API.
 )
 
-// Config holds options for the Yily client.
+// Config holds the options used by NewClient.
 type Config struct {
-	BaseURL       string        // BaseURL is the root URL of the Yily instance.
-	EnvironmentID string        // EnvironmentID identifies the environment to read variables from.
-	Token         string        // Token is the read-scoped PAT prefixed with "yily_".
-	HTTPClient    *http.Client  // HTTPClient optionally configures proxies, transports, and other HTTP behavior.
-	Timeout       time.Duration // Timeout limits each request; it defaults to 5 seconds.
+	BaseURL       string        // Root URL of the Yily instance.
+	EnvironmentID string        // Environment to read variables from.
+	Token         string        // Read-scoped PAT prefixed with "yily_".
+	HTTPClient    *http.Client  // Optional HTTP client; defaults to one using Timeout.
+	Timeout       time.Duration // Per-request timeout; defaults to 5 seconds.
 }
 
-// validate checks that all required configuration fields are set.
+// validate checks that all required fields are set and that BaseURL is a safe
+// absolute HTTP or HTTPS URL. It is called by NewClient.
 func (c *Config) validate() error {
 	baseURL := strings.TrimSpace(c.BaseURL)
 	if baseURL == "" {
