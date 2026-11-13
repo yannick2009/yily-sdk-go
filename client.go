@@ -78,12 +78,15 @@ func (c *Client) Load(ctx context.Context, target any) error {
 		return nil
 	}
 
-	names := make([]string, 0, len(fields))
+	selections := make([]batchVariable, 0, len(fields))
 	for _, field := range fields {
-		names = append(names, field.varName)
+		selections = append(selections, batchVariable{
+			Name:    field.varName,
+			Version: field.version,
+		})
 	}
 
-	values, err := c.fetchBatchValues(ctx, names)
+	values, err := c.fetchBatchValues(ctx, selections)
 	if err != nil {
 		return err
 	}
@@ -102,7 +105,7 @@ func (c *Client) Get(ctx context.Context, name string) (string, error) {
 		return "", ErrInvalidVariableName
 	}
 
-	values, err := c.fetchBatchValues(ctx, []string{name})
+	values, err := c.fetchBatchValues(ctx, []batchVariable{{Name: name}})
 	if err != nil {
 		return "", err
 	}
@@ -135,12 +138,12 @@ func (c *Client) GetAll(ctx context.Context) (map[string]string, error) {
 		return make(map[string]string), nil
 	}
 
-	names := make([]string, 0, len(resp.Data))
+	selections := make([]batchVariable, 0, len(resp.Data))
 	for _, item := range resp.Data {
-		names = append(names, item.Name)
+		selections = append(selections, batchVariable{Name: item.Name})
 	}
 
-	return c.fetchBatchValues(ctx, names)
+	return c.fetchBatchValues(ctx, selections)
 }
 
 // ------------------ HTTP request helpers ------------------
@@ -158,40 +161,46 @@ type batchValuesRequest struct {
 	Variables []batchVariable `json:"variables"`
 }
 
-// batchVariable selects one variable. An omitted version requests its active
-// version.
+// batchVariable selects one variable and, optionally, a version. A zero
+// version requests the variable's active version.
 type batchVariable struct {
-	Name string `json:"name"`
+	Name    string `json:"name"`
+	Version int    `json:"version,omitempty"`
 }
 
-// fetchBatchValues retrieves the active values of names from the batch endpoint.
+// fetchBatchValues retrieves variable values from the batch endpoint.
 //
-// Names are normalized and deduplicated before being sent. Unknown names are
-// omitted by the server and therefore absent from the returned map.
-func (c *Client) fetchBatchValues(ctx context.Context, names []string) (map[string]string, error) {
-	if len(names) == 0 {
-		return make(map[string]string), nil
-	}
-
-	requested := make(map[string]struct{}, len(names))
-	selections := make([]batchVariable, 0, len(names))
-	for _, name := range names {
-		name = normalizeVariableName(name)
-		if name == "" {
-			continue
-		}
-		if _, exists := requested[name]; exists {
-			continue
-		}
-		requested[name] = struct{}{}
-		selections = append(selections, batchVariable{Name: name})
-	}
-
+// Selections are normalized and deduplicated by name before being sent. Two
+// selections of the same variable must request the same version; otherwise
+// ErrConflictingVariableVersion is returned. Unknown names are omitted by the
+// server and therefore absent from the returned map.
+func (c *Client) fetchBatchValues(ctx context.Context, selections []batchVariable) (map[string]string, error) {
 	if len(selections) == 0 {
 		return make(map[string]string), nil
 	}
 
-	body, err := json.Marshal(batchValuesRequest{Variables: selections})
+	requestedVersion := make(map[string]int, len(selections))
+	deduped := make([]batchVariable, 0, len(selections))
+	for _, selection := range selections {
+		name := normalizeVariableName(selection.Name)
+		if name == "" {
+			continue
+		}
+		if version, exists := requestedVersion[name]; exists {
+			if version != selection.Version {
+				return nil, fmt.Errorf("%w: %s", ErrConflictingVariableVersion, name)
+			}
+			continue
+		}
+		requestedVersion[name] = selection.Version
+		deduped = append(deduped, batchVariable{Name: name, Version: selection.Version})
+	}
+
+	if len(deduped) == 0 {
+		return make(map[string]string), nil
+	}
+
+	body, err := json.Marshal(batchValuesRequest{Variables: deduped})
 	if err != nil {
 		return nil, fmt.Errorf("yily: failed to encode request: %w", err)
 	}

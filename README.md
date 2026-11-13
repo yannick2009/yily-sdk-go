@@ -89,6 +89,19 @@ The loader automatically converts Yily variables into the following Go types:
 
 Fields tagged with `yily:"-"` or without any `yily` tag are ignored.
 
+## Struct Tags
+
+Tag an exported field with the Yily variable name:
+
+```go
+type AppConfig struct {
+    DBHost string `yily:"DB_HOST"`
+    APIKey string `yily:"API_KEY,version=2"` // specific version
+}
+```
+
+Without `version`, `Load` retrieves the active version. `version` must be a positive integer; unknown or repeated options return `yily.ErrInvalidTag`. A variable cannot be tagged with different versions in the same struct (`yily.ErrConflictingVariableVersion`); active and versioned fields can otherwise be mixed freely.
+
 ## Secret Refreshing
 
 Applications can refresh secrets during runtime by recalling `Load` or `GetAll`:
@@ -111,6 +124,7 @@ The SDK exposes sentinel errors that can be inspected with standard `errors.Is`:
 - `yily.ErrInvalidValue`: a value could not be converted to the requested Go type. The error does not include the value.
 - `yily.ErrInvalidVariableName`: `Get` was called with an empty variable name after normalization.
 - `yily.ErrInvalidTag`: a struct tag is malformed or contains an unsupported option.
+- `yily.ErrConflictingVariableVersion`: the same variable is tagged with different versions in one struct.
 
 ## License
 

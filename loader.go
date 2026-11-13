@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -30,6 +31,7 @@ func inspectStruct(target any) ([]fieldInfo, error) {
 
 	elemType := elem.Type()
 	fields := make([]fieldInfo, 0, elem.NumField())
+	seen := make(map[string]int, elem.NumField())
 
 	for i := 0; i < elem.NumField(); i++ {
 		structField := elemType.Field(i)
@@ -44,8 +46,20 @@ func inspectStruct(target any) ([]fieldInfo, error) {
 			return nil, fmt.Errorf("%w: tagged field %q must be exported", ErrInvalidTag, structField.Name)
 		}
 
+		name, version, err := parseTag(tag)
+		if err != nil {
+			return nil, err
+		}
+		name = normalizeVariableName(name)
+
+		if previousVersion, exists := seen[name]; exists && previousVersion != version {
+			return nil, fmt.Errorf("%w: %s", ErrConflictingVariableVersion, name)
+		}
+		seen[name] = version
+
 		fields = append(fields, fieldInfo{
-			varName:  normalizeVariableName(tag),
+			varName:  name,
+			version:  version,
 			fieldVal: fieldVal,
 		})
 	}
@@ -56,7 +70,36 @@ func inspectStruct(target any) ([]fieldInfo, error) {
 // fieldInfo is one exported struct field selected for loading.
 type fieldInfo struct {
 	varName  string        // Normalized Yily variable name.
+	version  int           // Requested version; 0 selects the active version.
 	fieldVal reflect.Value // Settable value of the struct field.
+}
+
+// parseTag parses a `yily` tag such as "DB_HOST" or "DB_HOST,version=2".
+// The version is optional and must be a positive integer when present.
+func parseTag(tag string) (name string, version int, err error) {
+	parts := strings.Split(tag, ",")
+	name = strings.TrimSpace(parts[0])
+	if name == "" {
+		return "", 0, fmt.Errorf("%w: missing variable name", ErrInvalidTag)
+	}
+
+	versionSet := false
+	for _, part := range parts[1:] {
+		part = strings.TrimSpace(part)
+		key, value, ok := strings.Cut(part, "=")
+		if !ok || strings.TrimSpace(key) != "version" || versionSet {
+			return "", 0, fmt.Errorf("%w: unsupported or repeated option %q", ErrInvalidTag, part)
+		}
+
+		parsed, err := strconv.Atoi(strings.TrimSpace(value))
+		if err != nil || parsed <= 0 {
+			return "", 0, fmt.Errorf("%w: version must be a positive integer", ErrInvalidTag)
+		}
+		version = parsed
+		versionSet = true
+	}
+
+	return name, version, nil
 }
 
 // decodeFields is the second step of the loading pipeline used by Client.Load.

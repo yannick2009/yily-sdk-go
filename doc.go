@@ -8,6 +8,9 @@
 //   - Get reads one known variable.
 //   - GetAll reads every variable of the environment as a map.
 //
+// A tag may select a specific variable version with `version=N`, for example
+// `yily:"API_KEY,version=2"`. An omitted version loads the active version.
+//
 // Example:
 //
 //	type AppConfig struct {

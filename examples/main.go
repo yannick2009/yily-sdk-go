@@ -10,11 +10,12 @@ import (
 )
 
 type Config struct {
-	Host     string        `yily:"DB_HOST"`
-	Port     int           `yily:"DB_PORT"`
-	Debug    bool          `yily:"DEBUG"`
-	Timeout  time.Duration `yily:"TIMEOUT"`
-	APIToken string        `yily:"API_TOKEN"`
+	Host      string        `yily:"DB_HOST"`
+	Port      int           `yily:"DB_PORT"`
+	Debug     bool          `yily:"DEBUG"`
+	Timeout   time.Duration `yily:"TIMEOUT"`
+	APIToken  string        `yily:"API_TOKEN"`
+	LegacyKey string        `yily:"LEGACY_KEY,version=2"` // LegacyKey loads version 1 of LEGACY_KEY instead of the active version.
 }
 
 func main() {
@@ -38,8 +39,8 @@ func main() {
 	if err := client.Load(ctx, &cfg); err != nil {
 		log.Fatalf("load error: %v", err)
 	}
-	log.Printf("configuration loaded: host=%s port=%d debug=%t timeout=%s",
-		cfg.Host, cfg.Port, cfg.Debug, cfg.Timeout)
+	log.Printf("configuration loaded: host=%s port=%d debug=%t timeout=%s legacy_key_loaded=%t",
+		cfg.Host, cfg.Port, cfg.Debug, cfg.Timeout, cfg.LegacyKey != "")
 
 	// Get: read a single variable by name. This is useful when the name is
 	// only known at runtime. Do not log secret values in production.
