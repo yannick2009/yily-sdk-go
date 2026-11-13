@@ -24,7 +24,7 @@ func main() {
 	// Create the client once and reuse it for every call.
 	client, err := yily.NewClient(yily.Config{
 		BaseURL:       "http://localhost:16529",
-		EnvironmentID: "00000000-0000-0000-0000-000000000000",
+		EnvironmentID: "ENVxxxxxxxxxxxx",
 		Token:         os.Getenv("YILY_TOKEN"),
 	})
 	if err != nil {

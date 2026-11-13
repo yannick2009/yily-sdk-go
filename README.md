@@ -41,7 +41,7 @@ func main() {
 
 	client, err := yily.NewClient(yily.Config{
 		BaseURL:       "http://localhost:16529",
-		EnvironmentID: "your-environment-uuid",
+		EnvironmentID: "ENVxxxxxxxxxxxx",
 		Token:         os.Getenv("YILY_TOKEN"),
 	})
 	if err != nil {
@@ -81,6 +81,8 @@ func main() {
 	_ = legacyKey // Use the value in the application; do not log secrets.
 }
 ```
+
+`EnvironmentID` is the environment's `ENV…` identifier, shown in the Yily web interface and CLI. Replace the placeholder with the identifier of the environment you want to read; the SDK treats it as an opaque string.
 
 Use a read-scoped PAT for applications that only need to load configuration. PATs are created and managed through Yily's web interface. `Load` makes one batch request for the requested values (active by default, or the versions selected in tags). `Get` and `GetVersion` make one batch request with a single variable. `GetAll` makes one request to list the environment's variables and a second batch request to fetch their active values.
 

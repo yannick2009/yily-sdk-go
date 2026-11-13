@@ -16,7 +16,7 @@ const (
 // Config holds the options used by NewClient.
 type Config struct {
 	BaseURL       string        // Root URL of the Yily instance.
-	EnvironmentID string        // Environment to read variables from.
+	EnvironmentID string        // Environment ID (ENV…) to read variables from.
 	Token         string        // Read-scoped PAT prefixed with "yily_".
 	HTTPClient    *http.Client  // Optional HTTP client; defaults to one using Timeout.
 	Timeout       time.Duration // Per-request timeout; defaults to 5 seconds.

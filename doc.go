@@ -23,7 +23,7 @@
 //
 //	client, err := yily.NewClient(yily.Config{
 //		BaseURL:       "https://yily.example.com",
-//		EnvironmentID: "your-environment-uuid",
+//		EnvironmentID: "ENVxxxxxxxxxxxx",
 //		Token:         os.Getenv("YILY_TOKEN"),
 //	})
 //	if err != nil {
