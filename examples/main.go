@@ -15,7 +15,7 @@ type Config struct {
 	Debug     bool          `yily:"DEBUG"`
 	Timeout   time.Duration `yily:"TIMEOUT"`
 	APIToken  string        `yily:"API_TOKEN"`
-	LegacyKey string        `yily:"LEGACY_KEY,version=2"` // LegacyKey loads version 1 of LEGACY_KEY instead of the active version.
+	LegacyKey string        `yily:"LEGACY_KEY,version=2"` // LegacyKey loads version 2 of LEGACY_KEY instead of the active version.
 }
 
 func main() {
